@@ -16,6 +16,10 @@ Backups and student share files made by one app open in the other.
 - **Attendance**: sessions generated from the schedule, Present / Late / Absent / Excused per student, "everyone present", per-session topic, summary view. Late counts half; Excused is not counted. Attendance can optionally carry marks (set its weight in course settings).
 - **Gradebook**: weighted assessments, score entry grid, current *standing* (over graded work), letter grade, class rank (ties share a rank). Empty cell = not graded yet (skipped); 0 = a real zero.
 - **Analysis**: mean, median, high/low, standard deviation, pass rate and a score histogram per assessment.
+- **Insights** (web): score and attendance heat maps, a "what do I need on the final?" calculator per student, and a grade-curve preview.
+- **Groups** (web): balanced project groups dealt out by standing, printable and exportable.
+- **Calendar** (web): week-by-week view of sessions, topics and assessment due dates.
+- **Sample class**: one tap on the dashboard loads a 35-student demo course.
 - **At-risk register**: flags low attendance, low standing and missing scores, with email/call links.
 - **Announcements**, pinned or not.
 - **Reports** (web): gradebook CSV, attendance CSV, registrar grade sheet, sign-in sheet, per-student progress report (print or save as PDF).

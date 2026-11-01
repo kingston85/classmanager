@@ -40,7 +40,7 @@ function seed() {
 describe('screens render', () => {
   const routes = [
     '/', '/student', '/settings', '/course/c1', '/course/c1/roster', '/course/c1/attendance',
-    '/course/c1/gradebook', '/course/c1/analysis', '/course/c1/risk', '/course/c1/announcements',
+    '/course/c1/gradebook', '/course/c1/analysis', '/course/c1/insights', '/course/c1/groups', '/course/c1/calendar', '/course/c1/risk', '/course/c1/announcements',
     '/course/c1/share', '/course/c1/reports', '/course/c1/settings',
   ];
   for (const r of routes) {

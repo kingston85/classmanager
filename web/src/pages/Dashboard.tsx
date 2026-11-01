@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { mutate, useWorkspace } from '../store';
-import { atRisk, blankCourse, DAY_NAMES, todayISO } from '../logic';
+import { atRisk, blankCourse, DAY_NAMES, demoCourse, todayISO } from '../logic';
 
 export default function Dashboard() {
   const w = useWorkspace();
@@ -16,6 +16,12 @@ export default function Dashboard() {
     mutate((ws) => { ws.courses.push(c); });
     setAdding(false);
     nav(`/course/${c.id}/settings`);
+  }
+
+  function loadDemo() {
+    const c = demoCourse(w.lecturerName);
+    mutate((ws) => { ws.courses.push(c); });
+    nav(`/course/${c.id}`);
   }
 
   return (
@@ -52,7 +58,10 @@ export default function Dashboard() {
         <div className="card empty">
           <h2>No courses yet</h2>
           <p>Create your first course, then paste in your class roster.</p>
-          <button className="primary" onClick={() => setAdding(true)}>Create a course</button>
+          <div className="row" style={{ justifyContent: 'center' }}>
+            <button className="primary" onClick={() => setAdding(true)}>Create a course</button>
+            <button onClick={loadDemo}>Try a sample class</button>
+          </div>
         </div>
       ) : (
         <div className="grid cols-2" style={{ marginTop: '1rem' }}>

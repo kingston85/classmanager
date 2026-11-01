@@ -322,3 +322,160 @@ export function download(filename: string, content: string, mime = 'text/plain')
 export function statusLabel(s: Status | undefined): string {
   return s === 'P' ? 'Present' : s === 'A' ? 'Absent' : s === 'L' ? 'Late' : s === 'E' ? 'Excused' : '—';
 }
+
+// ---------- Insights ----------
+
+export interface NeededScore {
+  needed: number; // raw score needed on the assessment
+  neededPct: number; // as % of the assessment maximum
+  alreadyThere: boolean; // target already reached without this assessment
+  possible: boolean; // reachable with a score at or below the maximum
+}
+
+/**
+ * What the student must score on one assessment to finish on `targetPct` of the whole course.
+ * Every OTHER ungraded piece of work is assumed to score zero, which keeps the answer conservative.
+ */
+export function neededScore(course: Course, studentId: string, assessmentId: string, targetPct: number): NeededScore | null {
+  const a = course.assessments.find((x) => x.id === assessmentId);
+  if (!a || a.max <= 0 || a.weight <= 0) return null;
+  let earnedOther = 0;
+  let total = 0;
+  for (const x of course.assessments) {
+    total += x.weight;
+    if (x.id === a.id) continue;
+    const v = course.scores[x.id]?.[studentId];
+    if (v !== null && v !== undefined && x.max > 0) earnedOther += (v / x.max) * x.weight;
+  }
+  if (course.attendanceWeight > 0) {
+    total += course.attendanceWeight;
+    const att = attendanceStats(course, studentId);
+    if (att.pct !== null) earnedOther += (att.pct / 100) * course.attendanceWeight;
+  }
+  const pointsNeeded = (targetPct / 100) * total - earnedOther;
+  const needed = Math.max(0, (pointsNeeded / a.weight) * a.max);
+  return {
+    needed,
+    neededPct: (needed / a.max) * 100,
+    alreadyThere: pointsNeeded <= 0,
+    possible: needed <= a.max + 1e-9,
+  };
+}
+
+/** Standing of each student after adding `shift` percentage points (capped at 100), counted by letter. */
+export function curvePreview(course: Course, shift: number): { letter: string; before: number; after: number }[] {
+  const results = classResults(course).filter((r) => r.standing !== null);
+  return course.scale.map((band) => ({
+    letter: band.letter,
+    before: results.filter((r) => letterFor(r.standing, course.scale)?.letter === band.letter).length,
+    after: results.filter((r) => letterFor(Math.min(100, (r.standing as number) + shift), course.scale)?.letter === band.letter).length,
+  }));
+}
+
+export interface Group {
+  members: Student[];
+  avg: number | null;
+}
+
+/** Balanced project groups: students ranked by standing are dealt out in a snake pattern. */
+export function balancedGroups(course: Course, count: number): Group[] {
+  const k = Math.max(1, Math.min(count, course.students.length || 1));
+  const results = new Map(classResults(course).map((r) => [r.studentId, r.standing]));
+  const ranked = [...course.students].sort(
+    (a, b) => (results.get(b.id) ?? -1) - (results.get(a.id) ?? -1) || a.name.localeCompare(b.name),
+  );
+  const groups: Student[][] = Array.from({ length: k }, () => []);
+  ranked.forEach((s, i) => {
+    const round = Math.floor(i / k);
+    const pos = i % k;
+    groups[round % 2 === 0 ? pos : k - 1 - pos].push(s);
+  });
+  return groups.map((members) => {
+    const vals = members.map((m) => results.get(m.id)).filter((x): x is number => x !== null && x !== undefined);
+    return { members, avg: vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null };
+  });
+}
+
+/** Colour for a 0-100 value: red -> amber -> green. */
+export function heatColor(pct: number | null): string {
+  if (pct === null) return 'transparent';
+  const p = Math.max(0, Math.min(100, pct));
+  return `hsl(${Math.round(p * 1.2)}, 62%, ${p > 50 ? 38 : 42}%)`;
+}
+
+export function weekStart(iso: string): string {
+  const d = parseISO(iso);
+  const back = (d.getDay() + 6) % 7; // Monday start
+  d.setDate(d.getDate() - back);
+  return toISO(d);
+}
+
+// ---------- Demo data ----------
+
+function mulberry32(seed: number) {
+  return () => {
+    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const DEMO_NAMES = [
+  'Ama Doe', 'Kofi Mensah', 'Zainab Kamara', 'Joseph Tarpeh', 'Marie Gbowee', 'Emmanuel Kollie', 'Fatu Sirleaf',
+  'Samuel Nyenpan', 'Comfort Wiles', 'Prince Dolo', 'Hawa Johnson', 'Abraham Toe', 'Grace Flomo', 'Moses Kpoto',
+  'Mariama Sesay', 'Daniel Weah', 'Esther Boakai', 'Patrick Quiah', 'Naomi Cooper', 'Isaac Browne', 'Alieu Barry',
+  'Rebecca Davies', 'Jerome Gaye', 'Musu Kromah', 'Peter Zayzay', 'Janet Harmon', 'Augustine Lomax', 'Bintu Fofana',
+  'Henry Yeanay', 'Victoria Massaquoi', 'Oliver Tubman', 'Satta Konneh', 'Benjamin Saye', 'Josephine Dennis', 'Thomas Gartor',
+];
+
+/** A realistic sample class so every screen has something to show. Deterministic. */
+export function demoCourse(lecturer: string): Course {
+  const rnd = mulberry32(303);
+  const c = blankCourse(lecturer);
+  c.code = 'DEMO 303';
+  c.title = 'Fundamentals of Environmental Monitoring (sample class)';
+  c.semester = 'Sample data';
+  c.room = 'AB2-7W';
+  c.time = '14:00';
+  c.weeks = 8;
+  c.attendanceWeight = 5;
+  const start = new Date();
+  start.setDate(start.getDate() - 28);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // a Monday four-plus weeks ago
+  c.startDate = toISO(start);
+  c.students = DEMO_NAMES.map((name, i) => ({
+    id: uid(),
+    studentNo: String(1001 + i),
+    name,
+    email: `${name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
+    pin: genPin(),
+  }));
+  c.sessions = generateSessions(c);
+  const topics = ['Introduction to monitoring', 'Sampling design', 'Water quality indicators', 'Air quality and AQI', 'Soil sampling', 'QA/QC and calibration', 'Data analysis', 'Reporting'];
+  c.sessions.forEach((s, i) => { s.topic = topics[Math.floor(i / 3)] ?? ''; });
+  const today = todayISO();
+  const ability = c.students.map(() => 0.45 + rnd() * 0.5);
+  const diligence = c.students.map(() => 0.55 + rnd() * 0.45);
+  c.sessions.filter((s) => s.date <= today).forEach((s) => {
+    c.students.forEach((st, i) => {
+      const r = rnd();
+      s.records[st.id] = r < diligence[i] - 0.1 ? 'P' : r < diligence[i] ? 'L' : r < diligence[i] + 0.25 ? 'A' : 'E';
+    });
+  });
+  c.assessments = [
+    { id: 'd1', name: 'Assignment 1', category: 'Assignment', max: 10, weight: 10 },
+    { id: 'd2', name: 'Test One', category: 'Test', max: 20, weight: 20 },
+    { id: 'd3', name: 'Mid-Term Exam', category: 'Mid-Term', max: 50, weight: 30 },
+    { id: 'd4', name: 'Final Exam', category: 'Final Exam', max: 100, weight: 35 },
+  ];
+  c.scores = { d1: {}, d2: {}, d3: {}, d4: {} };
+  c.students.forEach((st, i) => {
+    for (const a of c.assessments.slice(0, 3)) {
+      const skip = rnd() < 0.04; // a couple of missing scores to show up in the at-risk list
+      c.scores[a.id][st.id] = skip ? null : Math.round(Math.min(1, Math.max(0.1, ability[i] + (rnd() - 0.5) * 0.3)) * a.max * 2) / 2;
+    }
+  });
+  c.announcements = [{ id: uid(), title: 'Welcome to the sample class', body: 'This is demo data. Delete the course from Course settings when you are done exploring.', date: today, pinned: true }];
+  return c;
+}

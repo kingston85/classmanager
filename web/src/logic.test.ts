@@ -144,3 +144,44 @@ describe('share bundle', () => {
     expect(JSON.stringify(bundle)).not.toContain('Kofi');
   });
 });
+
+import { balancedGroups, curvePreview, demoCourse, neededScore } from './logic';
+
+describe('insights', () => {
+  it('computes the score needed on the final', () => {
+    const c = sample();
+    // Ama has 18/20 on a 20% test => 18 points. Target 90 of 100 => 72 more points from the 80% final.
+    const n = neededScore(c, 's1', 'a2', 90)!;
+    expect(n.needed).toBeCloseTo(90);
+    expect(n.possible).toBe(true);
+    const hard = neededScore(c, 's2', 'a2', 90)!; // 10/20 test = 10 points; needs 80 of 80 => 100%
+    expect(hard.neededPct).toBeCloseTo(100);
+    expect(neededScore(c, 's2', 'a2', 99)!.possible).toBe(false);
+    expect(neededScore(c, 's1', 'a2', 10)!.alreadyThere).toBe(true);
+  });
+
+  it('previews a curve without changing data', () => {
+    const c = sample();
+    const p = curvePreview(c, 10);
+    expect(p.reduce((s, x) => s + x.before, 0)).toBe(3);
+    expect(p.find((x) => x.letter === 'F')?.before).toBe(1); // Kofi, 50%
+    expect(p.find((x) => x.letter === 'F')?.after).toBe(0); // +10 points lifts him to 60%
+    expect(p.find((x) => x.letter === 'D')?.after).toBe(1);
+  });
+
+  it('deals balanced groups', () => {
+    const c = demoCourse('x');
+    const g = balancedGroups(c, 5);
+    expect(g).toHaveLength(5);
+    expect(g.reduce((s, x) => s + x.members.length, 0)).toBe(35);
+    const avgs = g.map((x) => x.avg as number);
+    expect(Math.max(...avgs) - Math.min(...avgs)).toBeLessThan(6);
+  });
+
+  it('builds a demo class that exercises every screen', () => {
+    const c = demoCourse('x');
+    expect(c.students).toHaveLength(35);
+    expect(c.sessions.some((s) => Object.keys(s.records).length > 0)).toBe(true);
+    expect(classResults(c).every((r) => r.standing !== null)).toBe(true);
+  });
+});

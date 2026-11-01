@@ -8,12 +8,15 @@ import Analysis from './course/Analysis';
 import Risk from './course/Risk';
 import Announcements from './course/Announcements';
 import Share from './course/Share';
+import Insights from './course/Insights';
+import Groups from './course/Groups';
+import Calendar from './course/Calendar';
 import Reports from './course/Reports';
 import CourseSettings from './course/CourseSettings';
 
 const TABS: [string, string][] = [
   ['', 'Overview'], ['roster', 'Roster'], ['attendance', 'Attendance'], ['gradebook', 'Gradebook'],
-  ['analysis', 'Analysis'], ['risk', 'At-risk'], ['announcements', 'Announcements'],
+  ['analysis', 'Analysis'], ['insights', 'Insights'], ['risk', 'At-risk'], ['groups', 'Groups'], ['calendar', 'Calendar'], ['announcements', 'Announcements'],
   ['share', 'Share with students'], ['reports', 'Reports'], ['settings', 'Course settings'],
 ];
 
@@ -40,7 +43,10 @@ export default function CoursePage() {
         <Route path="attendance" element={<Attendance course={course} />} />
         <Route path="gradebook" element={<Gradebook course={course} />} />
         <Route path="analysis" element={<Analysis course={course} />} />
+        <Route path="insights" element={<Insights course={course} />} />
         <Route path="risk" element={<Risk course={course} />} />
+        <Route path="groups" element={<Groups course={course} />} />
+        <Route path="calendar" element={<Calendar course={course} />} />
         <Route path="announcements" element={<Announcements course={course} />} />
         <Route path="share" element={<Share course={course} />} />
         <Route path="reports" element={<Reports course={course} />} />
