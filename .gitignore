@@ -1,0 +1,13 @@
+node_modules/
+web/dist/
+app/build/
+app/.dart_tool/
+app/android/
+app/windows/
+app/ios/
+app/linux/
+app/macos/
+app/web/
+app/.metadata
+app/pubspec.lock
+.DS_Store
